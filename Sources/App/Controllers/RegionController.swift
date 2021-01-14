@@ -1,5 +1,6 @@
 import Fluent
 import Vapor
+import PostgresNIO
 
 struct CloudRegion: Content {
     let title: String
@@ -20,7 +21,9 @@ struct RegionController: RouteCollection {
         regions.post(use: create)
         regions.group(":regionID") { region in
             region.delete(use: delete)
-            region.put(use: attachChild)
+            region.group("new") { newAttachedRegion in
+                newAttachedRegion.post(use: attachChild)
+            }
         }
     }
 
@@ -49,6 +52,17 @@ struct RegionController: RouteCollection {
             .unwrap(or: Abort(.notFound))
             .flatMap { foundRegion in
                 foundRegion.$children.create(newRegion, on: req.db)
+                    .flatMapError { (error) -> EventLoopFuture<Void> in
+                        if let pgerror = error as? PostgresNIO.PostgresError {
+                            switch pgerror.code {
+                            case PostgresNIO.PostgresError.Code.uniqueViolation:
+                                return req.eventLoop.future(error: Abort(.notAcceptable, reason: pgerror.errorDescription))
+                            default:
+                                break
+                            }
+                        }
+                        return req.eventLoop.future(error: error)
+                    }
             }.map { newRegion }
     }
 
