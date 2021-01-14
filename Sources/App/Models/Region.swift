@@ -13,8 +13,11 @@ final class Region: Model, Content {
     @Field(key: "url")
     var url: String
 
-    //    @Parent
+    @OptionalParent(key: "parent_id")
+    var parent: Region?
 
+    @Children(for: \.$parent)
+    var children: [Region]
 
     init() { }
 
