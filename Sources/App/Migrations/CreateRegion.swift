@@ -7,6 +7,7 @@ struct CreateRegion: Migration {
             .field("title", .string, .required)
             .unique(on: "title")
             .field("url", .string, .required)
+            .field("isPassthrough", .bool, .required)
             .field("parent_id", .uuid, .references("region", "id", onDelete: .cascade))
             .create()
     }
